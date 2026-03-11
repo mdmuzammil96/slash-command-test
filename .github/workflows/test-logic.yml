@@ -1,0 +1,27 @@
+name: Manual Trigger Test
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  dummy-test:
+    # Only run on PR comments containing "/test"
+    if: github.event.issue.pull_request && github.event.comment.body == '/test'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for failure trigger
+        shell: bash
+        run: |
+          echo "Checking PR description for the word 'FAIL'..."
+          # Fetch PR body using GitHub CLI
+          PR_BODY=$(gh pr view ${{ github.event.issue.number }} --json body -q .body)
+          
+          if [[ "$PR_BODY" == *"FAIL"* ]]; then
+            echo "Dummy test: FAILURE detected in PR description."
+            exit 1
+          else
+            echo "Dummy test: SUCCESS! No failure keyword found."
+            exit 0
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
