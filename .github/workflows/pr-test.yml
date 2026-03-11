@@ -2,9 +2,7 @@ name: Run test cases
 
 on:
   pull_request_target:
-    types: [opened, edited, reopened, synchronize, labeled]
-    branches:
-      - main
+    types: [labeled]
 
 jobs:
   tests:
@@ -13,8 +11,4 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Dummy test
-        run: |
-          echo "Running tests..."
-          sleep 5
-          echo "Tests passed!"
+      - run: echo "Running tests"
