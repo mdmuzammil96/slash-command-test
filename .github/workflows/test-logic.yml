@@ -5,22 +5,25 @@ on:
 
 jobs:
   dummy-test:
-    # Only run on PR comments containing "/test"
     if: github.event.issue.pull_request && github.event.comment.body == '/test'
     runs-on: ubuntu-latest
     steps:
+      # 1. This "fixes" the .git error by initializing the workspace
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Now 'gh' will know which repo to look at
       - name: Check for failure trigger
         shell: bash
         run: |
           echo "Checking PR description for the word 'FAIL'..."
-          # Fetch PR body using GitHub CLI
           PR_BODY=$(gh pr view ${{ github.event.issue.number }} --json body -q .body)
           
           if [[ "$PR_BODY" == *"FAIL"* ]]; then
-            echo "Dummy test: FAILURE detected in PR description."
+            echo "Dummy test: FAILURE detected. Exiting 1."
             exit 1
           else
-            echo "Dummy test: SUCCESS! No failure keyword found."
+            echo "Dummy test: SUCCESS! Exiting 0."
             exit 0
           fi
         env:
