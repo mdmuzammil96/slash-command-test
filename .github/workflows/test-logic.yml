@@ -1,19 +1,23 @@
 name: Manual Trigger Test
+
 on:
   issue_comment:
     types: [created]
 
 jobs:
   dummy-test:
+    # Only run if it's a Pull Request and the comment is exactly "/test"
     if: github.event.issue.pull_request && github.event.comment.body == '/test'
     runs-on: ubuntu-latest
+    
     steps:
-      # 1. This "fixes" the .git error by initializing the workspace
+      # 1. Initialize the workspace so 'gh' CLI knows the context
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Now 'gh' will know which repo to look at
+      # 2. Logic to simulate Pass or Fail based on PR description
       - name: Check for failure trigger
+        id: check_logic
         shell: bash
         run: |
           echo "Checking PR description for the word 'FAIL'..."
@@ -26,5 +30,32 @@ jobs:
             echo "Dummy test: SUCCESS! Exiting 0."
             exit 0
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. Explicitly post status back to the PR Commit SHA
+      - name: Post Status to PR Commit
+        if: always() # Ensure this runs even if the previous step fails
+        shell: bash
+        run: |
+          # Get the SHA of the PR head
+          SHA=$(gh pr view ${{ github.event.issue.number }} --json headRefOid -q .headRefOid)
+          
+          # Map the job outcome to GitHub status states
+          if [ "${{ steps.check_logic.outcome }}" == "success" ]; then 
+            FINAL_STATE="success"
+          else 
+            FINAL_STATE="failure"
+          fi
+
+          echo "Posting $FINAL_STATE status to SHA $SHA..."
+
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/statuses/$SHA \
+            -d "{\"state\":\"$FINAL_STATE\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"Manual test status\",\"context\":\"dummy-test\"}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
