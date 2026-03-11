@@ -1,0 +1,22 @@
+name: PR Test Command
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-tests:
+    name: Run test cases
+
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/test')
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Dummy test
+        run: |
+          echo "Running dummy tests..."
+          sleep 5
+          echo "Tests passed!"
